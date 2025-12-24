@@ -85,13 +85,13 @@ public class CheckingAccount extends BankAccount {
      * @throws InsufficientFundsException if withdrawal would exceed overdraft limit
      * @throws InvalidAmountException     if amount is zero or negative
      */
-    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException {
+    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
         withdrawInternal(amount, TransactionType.WITHDRAWAL);
     }
 
     @Override
     protected void withdrawInternal(double amount, TransactionType type)
-            throws InsufficientFundsException, InvalidAmountException {
+            throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
 
         // Validate amount first
         super.withdrawInternal(amount, type);

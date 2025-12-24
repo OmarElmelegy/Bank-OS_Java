@@ -1,0 +1,23 @@
+# Compiled class files
+*.class
+bin/
+
+# Log files
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+
+# Test results
+*.xml
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Keep directory structure but ignore content (if needed)
+# out/docs/.gitkeep will preserve the directory

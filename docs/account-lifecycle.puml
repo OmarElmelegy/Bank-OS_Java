@@ -1,0 +1,50 @@
+@startuml account-lifecycle
+!theme plain
+
+title Bank Account Lifecycle State Machine
+
+[*] --> ACTIVE : Account Created
+
+ACTIVE --> FROZEN : freezeAccount(reason)
+FROZEN --> ACTIVE : unfreezeAccount(reason)
+
+ACTIVE --> CLOSED : closeAccount(reason)\n[balance == 0]
+FROZEN --> CLOSED : closeAccount(reason)\n[balance == 0]
+
+ACTIVE : Can perform all operations
+ACTIVE : - deposit()
+ACTIVE : - withdraw()
+ACTIVE : - transfer()
+ACTIVE : - applyInterest()
+
+FROZEN : Limited operations
+FROZEN : - Can view balance
+FROZEN : - Can view statement
+FROZEN : - Cannot transact
+
+CLOSED --> [*] : Account Terminated
+
+CLOSED : No operations allowed
+CLOSED : - Cannot deposit
+CLOSED : - Cannot withdraw
+CLOSED : - Read-only access
+
+note right of ACTIVE
+  Normal operation state.
+  All financial operations
+  are permitted.
+end note
+
+note right of FROZEN
+  Temporary suspension.
+  Usually for security or
+  compliance reasons.
+end note
+
+note right of CLOSED
+  Permanent state.
+  Balance must be zero
+  before closing.
+end note
+
+@enduml

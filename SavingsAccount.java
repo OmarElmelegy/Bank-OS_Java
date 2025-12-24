@@ -67,7 +67,7 @@ public class SavingsAccount extends BankAccount {
      * instead of the central bank's default rate.
      */
     @Override
-    public void applyInterest() {
+    public void applyInterest() throws AccountStatusException{
         super.applyInterest(interestRate);
     }
 
@@ -82,13 +82,13 @@ public class SavingsAccount extends BankAccount {
      * @throws InsufficientFundsException if balance is insufficient
      * @throws InvalidAmountException     if amount is zero or negative
      */
-    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException {
+    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
         withdrawInternal(amount, TransactionType.WITHDRAWAL);
     }
 
     @Override
     protected void withdrawInternal(double amount, TransactionType type)
-            throws InsufficientFundsException, InvalidAmountException {
+            throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
 
         // Validate amount first
         super.withdrawInternal(amount, type);

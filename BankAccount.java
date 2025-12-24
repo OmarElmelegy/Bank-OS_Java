@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -49,7 +50,8 @@ public abstract class BankAccount {
      * 
      * @param accountNumber the unique identifier for this account (must not be null
      *                      or empty)
-     * @param owner         the name of the account owner (must not be null or
+     * @param owner         the name of the account own÷, AccountStatusExceptier
+     *                      (must not be null or
      *                      empty)
      * @throws NullPointerException     if accountNumber or owner is null
      * @throws IllegalArgumentException if accountNumber or owner is empty after
@@ -99,29 +101,67 @@ public abstract class BankAccount {
     }
 
     public List<Transaction> getTransactionLog() {
-        return transactionLog;
+        return Collections.unmodifiableList(transactionLog);
     }
 
+    /**
+     * Returns the current status of the account.
+     * 
+     * @return the account status (ACTIVE, FROZEN, or CLOSED)
+     */
     public AccountStatus getStatus() {
         return status;
     }
 
+    /**
+     * Freezes the account, preventing all financial transactions.
+     * 
+     * <p>
+     * When frozen, the account cannot perform deposits, withdrawals, or transfers.
+     * The account can be unfrozen using {@link #unfreezeAccount(String)}.
+     * 
+     * @param reason the reason for freezing the account (e.g., "suspicious
+     *               activity")
+     */
     public void freezeAccount(String reason) {
         this.status = AccountStatus.FROZEN;
         logger.info("Account " + accountNumber + " frozen: " + reason);
     }
 
+    /**
+     * Unfreezes a previously frozen account, restoring it to active status.
+     * 
+     * <p>
+     * After unfreezing, all normal account operations are permitted again.
+     * 
+     * @param reason the reason for unfreezing the account (e.g., "verification
+     *               completed")
+     */
     public void unfreezeAccount(String reason) {
         this.status = AccountStatus.ACTIVE;
         logger.info("Account " + accountNumber + " unfrozen: " + reason);
     }
 
+    /**
+     * Closes the account permanently.
+     * 
+     * <p>
+     * The account balance must be exactly zero before closing. If the balance is
+     * positive, all funds must be withdrawn first. If the balance is negative,
+     * all debts must be paid off first.
+     * 
+     * <p>
+     * Once closed, the account cannot be reopened or used for any transactions.
+     * 
+     * @param reason the reason for closing the account (e.g., "customer request")
+     * @throws AccountStatusException if the account has a non-zero balance
+     */
     public void closeAccount(String reason) throws AccountStatusException {
         if (this.balance > ZERO_BALANCE) {
-            throw new AccountStatusException("Withdraw funds before closing");
+            throw new AccountStatusException("Withdraw funds before closing.");
         }
         if (this.balance < ZERO_BALANCE) {
-            throw new AccountStatusException("Pay off debts before closing");
+            throw new AccountStatusException("Pay off debts before closing.");
         }
 
         this.status = AccountStatus.CLOSED;
@@ -135,7 +175,7 @@ public abstract class BankAccount {
 
     private void deposit(double amount, TransactionType type) throws InvalidAmountException, AccountStatusException {
         if (this.status == AccountStatus.CLOSED) {
-            throw new AccountStatusException("Account is closed");
+            throw new AccountStatusException("Account is closed.");
         }
         if (this.status == AccountStatus.FROZEN) {
             throw new AccountStatusException("Account is frozen: Contact Support");
@@ -177,6 +217,17 @@ public abstract class BankAccount {
         transactionLog.add(tempTransaction);
     }
 
+    /**
+     * Prints a complete account statement to standard output.
+     * 
+     * <p>
+     * The statement includes:
+     * <ul>
+     * <li>Account owner and number</li>
+     * <li>Complete transaction history with timestamps</li>
+     * <li>Current account balance</li>
+     * </ul>
+     */
     public void printStatement() {
         System.out.println("\n--- STATEMENT FOR: " + owner + " (" + accountNumber + ") ---");
 
@@ -187,12 +238,40 @@ public abstract class BankAccount {
         System.out.println("CURRENT BALANCE: $" + this.balance + "\n");
     }
 
+    /**
+     * Transfers money from this account to another account.
+     * 
+     * <p>
+     * This operation uses a two-phase commit with automatic rollback:
+     * <ol>
+     * <li>Withdraws the amount from this account</li>
+     * <li>Deposits the amount into the target account</li>
+     * <li>If deposit fails, automatically returns funds to this account</li>
+     * </ol>
+     * 
+     * <p>
+     * Thread-safe: This method is synchronized to prevent concurrent transfers.
+     * 
+     * @param target the destination account (must be active and not the same as
+     *               this account)
+     * @param amount the amount to transfer (must be positive)
+     * @throws InvalidAmountException     if amount is not positive
+     * @throws InsufficientFundsException if this account has insufficient funds
+     * @throws AccountStatusException     if either account is not active
+     * @throws IllegalArgumentException   if target is the same as this account
+     */
     public synchronized void transferTo(BankAccount target, double amount)
             throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
 
         // Validate before any state changes
         if (amount <= 0) {
             throw new InvalidAmountException("Transfer amount must be positive");
+        }
+        if (target.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountStatusException("Target account is not active");
+        }
+        if (this.equals(target)) {
+            throw new IllegalArgumentException("Cannot transfer to same account");
         }
 
         // Perform withdrawal
@@ -205,13 +284,13 @@ public abstract class BankAccount {
             // ROLLBACK: Re-deposit withdrawn amount
             try {
                 this.deposit(amount, TransactionType.REVERSAL);
-                logger.warning(String.format(
+                logger.info(String.format(
                         "Transfer failed from %s to %s: %s. Amount returned to source account.",
                         this.accountNumber, target.getAccountNumber(), e.getMessage()));
                 System.err.println("Transfer failed - amount returned to source account");
             } catch (Exception rollbackEx) {
                 // This should never happen, but log it
-                logger.severe(String.format(
+                logger.info(String.format(
                         "CRITICAL: Rollback failed for transfer from %s to %s! Data inconsistency!",
                         this.accountNumber, target.getAccountNumber()));
                 System.err.println("CRITICAL: Rollback failed! Data inconsistency!");
@@ -219,27 +298,63 @@ public abstract class BankAccount {
             }
             throw new RuntimeException("Transfer failed: " + e.getMessage(), e);
         }
-
         System.out.printf("SUCCESS: Transferred $%.2f from %s to %s%n",
                 amount, this.accountNumber, target.getAccountNumber());
     }
 
+    /**
+     * Retrieves all transactions of a specific type from the transaction log.
+     * 
+     * <p>
+     * Returns an unmodifiable list containing only transactions matching the
+     * specified type (e.g., all deposits, all withdrawals, all fees).
+     * 
+     * @param type the transaction type to filter by
+     * @return an unmodifiable list of transactions of the specified type
+     */
     public List<Transaction> getTransactionByType(TransactionType type) {
         return transactionLog.stream()
                 .filter(t -> t.getType() == type)
                 .collect(Collectors.toUnmodifiableList());
     }
 
-    public void applyInterest() {
+    /**
+     * Applies interest to the account using the central bank's interest rate.
+     * 
+     * <p>
+     * The interest is calculated as: balance × central bank rate. The resulting
+     * amount is deposited as an INTEREST transaction. Interest is only applied
+     * if the account is active and the calculated profit is positive.
+     * 
+     * <p>
+     * Note: SavingsAccount overrides this to use account-specific rates.
+     * 
+     * @throws AccountStatusException if the account is not active
+     */
+    public void applyInterest() throws AccountStatusException {
         applyInterest(CentralBank.getInstance().getInterestRate());
     }
 
-    protected void applyInterest(double interestRate) {
+    /**
+     * Applies interest to the account using a specific interest rate.
+     * 
+     * <p>
+     * This protected method is used by subclasses to apply custom interest rates.
+     * The interest is calculated as: balance × interestRate. If the result is
+     * positive and the account is active, it's added as an INTEREST transaction.
+     * 
+     * @param interestRate the interest rate to apply (e.g., 0.05 for 5%)
+     * @throws AccountStatusException if the account is not active
+     */
+    protected void applyInterest(double interestRate) throws AccountStatusException {
         double profit = this.balance * interestRate;
 
         if (profit <= 0) {
             System.out.println("No interest applied (zero profit)");
             return;
+        }
+        if (this.status != AccountStatus.ACTIVE) {
+            throw new AccountStatusException("Interest not applied - account not active");
         }
 
         try {
@@ -264,5 +379,11 @@ public abstract class BankAccount {
     @Override
     public int hashCode() {
         return Objects.hash(accountNumber);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("BankAccount[%s, owner=%s, balance=$%.2f, status=%s]",
+                accountNumber, owner, balance, status);
     }
 }

@@ -1,0 +1,92 @@
+@startuml sequence-diagram
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+skinparam SequenceMessageAlign center
+
+' Color scheme
+skinparam participant {
+    BackgroundColor #E8F4F8
+    BorderColor #2C3E50
+}
+
+skinparam actor {
+    BackgroundColor #3498DB
+    BorderColor #2C3E50
+}
+
+skinparam database {
+    BackgroundColor #F39C12
+    BorderColor #2C3E50
+}
+
+skinparam note {
+    BackgroundColor #FFF9E6
+    BorderColor #F39C12
+}
+
+title Transfer Operation with Automatic Rollback
+
+actor User
+participant "Source\nAccount" as Source
+participant "Target\nAccount" as Target
+database "Transaction\nLog" as DB
+
+User -> Source: transferTo(target, $500)
+activate Source #LightBlue
+
+note right of Source
+  <b>Validation Phase</b>
+  • Amount > 0
+  • Target is ACTIVE
+  • Not same account
+end note
+
+Source -> Source: validate()
+
+== Withdrawal Phase ==
+
+Source -> Source: withdrawInternal($500)
+activate Source #SkyBlue
+Source -> Source: balance -= $500
+Source -> DB: log(TRANSFER, $500)
+deactivate Source
+
+== Deposit Phase ==
+
+Source -> Target: deposit($500)
+activate Target #LightGreen
+
+Source -> Target: deposit($500)
+activate Target #LightGreen
+
+alt Target Account is FROZEN or CLOSED
+    
+    Target --> Source: ❌ AccountStatusException
+    
+    == Rollback Phase ==
+    
+    Source -> Source: deposit($500, REVERSAL)
+    activate Source #LightCoral
+    note right: Automatic rollback
+    Source -> Source: balance += $500
+    Source -> DB: log(REVERSAL, $500)
+    deactivate Source
+    
+    Source --> User: ❌ Transfer Failed\n(funds returned)
+    
+else Target Account is ACTIVE
+    
+    Target -> Target: balance += $500
+    Target -> DB: log(TRANSFER, $500)
+    Target --> Source: ✓ Success
+    deactivate Target
+    
+    Source --> User: ✓ Transfer Complete
+    
+end
+
+deactivate Source
+
+@enduml

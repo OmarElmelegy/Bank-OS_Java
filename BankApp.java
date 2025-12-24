@@ -42,7 +42,7 @@ public class BankApp {
         } catch (InvalidAmountException e) {
             System.out.println(">> INVALID INPUT: " + e.getMessage());
         } catch (AccountStatusException e) {
-            System.out.println(">> INVALID INPUT: " + e.getMessage());
+            System.out.println(">> ACCOUNT STATUS ERROR: " + e.getMessage());
         }
 
         account.printStatement();
@@ -60,7 +60,11 @@ public class BankApp {
         CentralBank anotherRef = CentralBank.getInstance();
         System.out.println(anotherRef.getInterestRate());
 
-        account.applyInterest();
+        try {
+            account.applyInterest();
+        } catch (AccountStatusException e) {
+            System.out.println(">> ACCOUNT STATUS ERROR: " + e.getMessage());
+        }
         account.printStatement();
     }
 }

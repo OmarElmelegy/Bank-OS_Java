@@ -1,6 +1,8 @@
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -30,7 +32,7 @@ public class BankSystemTest {
     @Test
     @Order(1)
     @DisplayName("Test deposit positive amount")
-    public void testDepositPositiveAmount() throws InvalidAmountException {
+    public void testDepositPositiveAmount() throws InvalidAmountException, AccountStatusException {
         BankAccount account = new SavingsAccount("ACC002", "Jane Smith");
         account.deposit(500.00);
         assertThat(account.getBalance()).isEqualTo(500.00);
@@ -62,7 +64,8 @@ public class BankSystemTest {
     @Test
     @Order(4)
     @DisplayName("Test successful withdrawal")
-    public void testSuccessfulWithdrawal() throws InvalidAmountException, InsufficientFundsException {
+    public void testSuccessfulWithdrawal()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         SavingsAccount account = new SavingsAccount("ACC005", "Charlie Davis");
         account.deposit(1000.00);
         account.withdraw(300.00);
@@ -73,7 +76,7 @@ public class BankSystemTest {
     @Test
     @Order(5)
     @DisplayName("Test withdrawal with insufficient balance")
-    public void testWithdrawalInsufficientBalance() throws InvalidAmountException {
+    public void testWithdrawalInsufficientBalance() throws InvalidAmountException, AccountStatusException {
         SavingsAccount account = new SavingsAccount("ACC006", "Diana Evans");
         account.deposit(200.00);
         assertThrows(InsufficientFundsException.class, () -> {
@@ -85,7 +88,7 @@ public class BankSystemTest {
     @Test
     @Order(6)
     @DisplayName("Test withdrawal negative amount rejected")
-    public void testWithdrawalNegativeAmount() throws InvalidAmountException {
+    public void testWithdrawalNegativeAmount() throws InvalidAmountException, AccountStatusException {
         SavingsAccount account = new SavingsAccount("ACC007", "Eve Foster");
         account.deposit(500.00);
         assertThrows(InvalidAmountException.class, () -> {
@@ -97,7 +100,8 @@ public class BankSystemTest {
     @Test
     @Order(7)
     @DisplayName("Test multiple transactions")
-    public void testMultipleTransactions() throws InvalidAmountException, InsufficientFundsException {
+    public void testMultipleTransactions()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         SavingsAccount account = new SavingsAccount("ACC008", "Frank Green");
         account.deposit(1000.00);
         account.withdraw(200.00);
@@ -110,7 +114,7 @@ public class BankSystemTest {
     @Test
     @Order(8)
     @DisplayName("Test print statement")
-    public void testPrintStatement() throws InvalidAmountException, InsufficientFundsException {
+    public void testPrintStatement() throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         SavingsAccount account = new SavingsAccount("ACC009", "Grace Hill");
         account.deposit(750.00);
         account.withdraw(150.00);
@@ -155,7 +159,8 @@ public class BankSystemTest {
     @Test
     @Order(12)
     @DisplayName("Test checking account overdraft")
-    public void testCheckingAccountOverdraft() throws InvalidAmountException, InsufficientFundsException {
+    public void testCheckingAccountOverdraft()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         CheckingAccount account = new CheckingAccount("CHK001", "Alice Johnson", 500.0);
         account.deposit(100.00);
         account.withdraw(150.00);
@@ -167,7 +172,8 @@ public class BankSystemTest {
     @Test
     @Order(13)
     @DisplayName("Test checking account overdraft fee")
-    public void testCheckingAccountOverdraftFee() throws InvalidAmountException, InsufficientFundsException {
+    public void testCheckingAccountOverdraftFee()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         CheckingAccount account = new CheckingAccount("CHK002", "Bob Smith");
         account.deposit(50.00);
         double initialBalance = account.getBalance();
@@ -189,7 +195,8 @@ public class BankSystemTest {
     @Test
     @Order(15)
     @DisplayName("Test transfer between accounts")
-    public void testTransferBetweenAccounts() throws InvalidAmountException, InsufficientFundsException {
+    public void testTransferBetweenAccounts()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
         BankAccount account1 = new SavingsAccount("ACC101", "David Lee");
         BankAccount account2 = new SavingsAccount("ACC102", "Emma Wilson");
 
@@ -206,7 +213,7 @@ public class BankSystemTest {
     @Test
     @Order(16)
     @DisplayName("Test transfer with insufficient funds")
-    public void testTransferInsufficientFunds() throws InvalidAmountException {
+    public void testTransferInsufficientFunds() throws InvalidAmountException, AccountStatusException {
         BankAccount account1 = new SavingsAccount("ACC103", "Frank Miller");
         BankAccount account2 = new SavingsAccount("ACC104", "Grace Taylor");
 
@@ -214,6 +221,156 @@ public class BankSystemTest {
 
         assertThrows(Exception.class, () -> {
             account1.transferTo(account2, 500.00);
+        });
+    }
+
+    /** Tests account freeze functionality */
+    @Test
+    @Order(17)
+    @DisplayName("Test account freeze")
+    public void testAccountFreeze() throws InvalidAmountException, AccountStatusException {
+        BankAccount account = new SavingsAccount("ACC201", "Henry Adams");
+        account.deposit(1000.00);
+
+        account.freezeAccount("Suspicious activity");
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.FROZEN);
+
+        // Should not be able to deposit when frozen
+        assertThrows(AccountStatusException.class, () -> {
+            account.deposit(100.00);
+        });
+    }
+
+    /** Tests account unfreeze functionality */
+    @Test
+    @Order(18)
+    @DisplayName("Test account unfreeze")
+    public void testAccountUnfreeze() throws InvalidAmountException, AccountStatusException {
+        BankAccount account = new SavingsAccount("ACC202", "Irene Brooks");
+        account.deposit(500.00);
+
+        account.freezeAccount("Security check");
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.FROZEN);
+
+        account.unfreezeAccount("Verification completed");
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+
+        // Should be able to deposit after unfreezing
+        account.deposit(200.00);
+        assertThat(account.getBalance()).isEqualTo(700.00);
+    }
+
+    /** Tests account closure with zero balance */
+    @Test
+    @Order(19)
+    @DisplayName("Test account closure with zero balance")
+    public void testAccountClosureZeroBalance() throws AccountStatusException {
+        BankAccount account = new SavingsAccount("ACC203", "Jack Carter");
+
+        account.closeAccount("Customer request");
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.CLOSED);
+    }
+
+    /** Tests account closure with non-zero balance fails */
+    @Test
+    @Order(20)
+    @DisplayName("Test account closure with non-zero balance fails")
+    public void testAccountClosureNonZeroBalance() throws InvalidAmountException, AccountStatusException {
+        BankAccount account = new SavingsAccount("ACC204", "Karen Davis");
+        account.deposit(500.00);
+
+        assertThrows(AccountStatusException.class, () -> {
+            account.closeAccount("Attempted closure");
+        });
+    }
+
+    /** Tests operations on closed account are rejected */
+    @Test
+    @Order(21)
+    @DisplayName("Test operations on closed account rejected")
+    public void testClosedAccountOperations() throws AccountStatusException {
+        BankAccount account = new SavingsAccount("ACC205", "Laura Evans");
+        account.closeAccount("Account closed");
+
+        assertThrows(AccountStatusException.class, () -> {
+            account.deposit(100.00);
+        });
+    }
+
+    /** Tests transfer to frozen account fails with rollback */
+    @Test
+    @Order(22)
+    @DisplayName("Test transfer to frozen account with rollback")
+    public void testTransferToFrozenAccountRollback() throws InvalidAmountException, AccountStatusException {
+        BankAccount source = new SavingsAccount("ACC301", "Michael Foster");
+        BankAccount target = new SavingsAccount("ACC302", "Nancy Green");
+
+        source.deposit(1000.00);
+        target.deposit(500.00);
+        target.freezeAccount("Security review");
+
+        double initialSourceBalance = source.getBalance();
+
+        assertThrows(AccountStatusException.class, () -> {
+            source.transferTo(target, 200.00);
+        });
+
+        // Verify rollback - source should still have original balance
+        assertThat(source.getBalance()).isEqualTo(initialSourceBalance);
+    }
+
+    /** Tests transaction log filtering by type */
+    @Test
+    @Order(23)
+    @DisplayName("Test transaction filtering by type")
+    public void testTransactionFiltering()
+            throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
+        SavingsAccount account = new SavingsAccount("ACC401", "Oliver Hill");
+        account.deposit(1000.00);
+        account.withdraw(200.00);
+        account.deposit(300.00);
+
+        List<Transaction> deposits = account.getTransactionByType(TransactionType.DEPOSIT);
+        List<Transaction> withdrawals = account.getTransactionByType(TransactionType.WITHDRAWAL);
+
+        assertThat(deposits).hasSize(2);
+        assertThat(withdrawals).hasSize(1);
+    }
+
+    /** Tests account status after creation */
+    @Test
+    @Order(24)
+    @DisplayName("Test account status after creation")
+    public void testAccountStatusAfterCreation() {
+        BankAccount account = new SavingsAccount("ACC501", "Patricia Jones");
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+    }
+
+    /** Tests interest application on savings account */
+    @Test
+    @Order(25)
+    @DisplayName("Test interest application on savings account")
+    public void testInterestApplication() throws InvalidAmountException, AccountStatusException {
+        SavingsAccount account = new SavingsAccount("ACC601", "Quentin King", 0.05);
+        account.deposit(1000.00);
+
+        account.applyInterest();
+
+        // Balance should be 1000 + (1000 * 0.05) = 1050
+        assertThat(account.getBalance()).isEqualTo(1050.00);
+    }
+
+    /** Tests interest not applied on frozen account */
+    @Test
+    @Order(26)
+    @DisplayName("Test interest not applied on frozen account")
+    public void testInterestNotAppliedOnFrozenAccount() throws InvalidAmountException, AccountStatusException {
+        SavingsAccount account = new SavingsAccount("ACC602", "Rachel Lee", 0.05);
+        account.deposit(1000.00);
+        account.freezeAccount("Temporary hold");
+
+        assertThrows(AccountStatusException.class, () -> {
+            account.applyInterest();
         });
     }
 }

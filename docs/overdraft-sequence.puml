@@ -1,0 +1,73 @@
+@startuml overdraft-sequence
+!theme plain
+skinparam sequenceMessageAlign center
+
+title Checking Account Overdraft Fee Application
+
+actor User
+participant "checking:CheckingAccount" as Checking
+participant "Transaction" as Trans
+database "transactionLog" as DB
+
+User -> Checking: withdraw($600)
+activate Checking
+
+Checking -> Checking: withdrawInternal($600, WITHDRAWAL)
+activate Checking
+
+' Initial balance check
+note right of Checking
+  Initial Balance: $100
+  Overdraft Limit: $500
+  Fee: $35
+end note
+
+Checking -> Checking: super.withdrawInternal($600, WITHDRAWAL)
+Checking -> Checking: validate account status (ACTIVE)
+Checking -> Checking: validate amount > 0 ✓
+
+Checking -> Checking: willGoNegative = (balance >= 0 && balance - amount < 0)
+note right: willGoNegative = true
+
+Checking -> Checking: projectedBalance = $100 - $600 - $35 = -$535
+note right: Including potential fee
+
+alt Projected Balance Exceeds Overdraft Limit
+    Checking -> Checking: if projectedBalance < -overdraftLimit
+    note right: -$535 < -$500 ? YES!
+    Checking --> User: throw InsufficientFundsException
+    
+else Within Overdraft Limit
+    note right: -$535 >= -$500 ? Would proceed
+    
+    Checking -> Checking: wasNonNegative = (balance >= 0)
+    note right: wasNonNegative = true
+    
+    Checking -> Checking: finalizeWithdrawal($600, WITHDRAWAL)
+    activate Checking
+    Checking -> Checking: balance = $100 - $600 = -$500
+    create Trans
+    Checking -> Trans: new Transaction($600, WITHDRAWAL)
+    Checking -> DB: add(transaction)
+    deactivate Checking
+    
+    Checking -> Checking: if (wasNonNegative && balance < 0)
+    note right: true && true = Charge Fee!
+    
+    Checking -> Checking: finalizeWithdrawal($35, FEE)
+    activate Checking
+    Checking -> Checking: balance = -$500 - $35 = -$535
+    create Trans
+    Checking -> Trans: new Transaction($35, FEE)
+    Checking -> DB: add(transaction)
+    deactivate Checking
+    
+    Checking -> Checking: log("OVERDRAFT FEE: $35.00")
+    
+    Checking --> User: Success (Balance: -$535)
+end
+
+deactivate Checking
+deactivate Checking
+
+@enduml
