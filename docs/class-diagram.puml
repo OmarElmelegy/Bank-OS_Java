@@ -1,285 +1,273 @@
-@startuml class-diagram
+@startuml
 !theme plain
 skinparam classAttributeIconSize 0
-skinparam linetype polyline
-skinparam nodesep 80
-skinparam ranksep 100
-skinparam padding 10
-skinparam backgroundColor #FEFEFE
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+skinparam padding 8
+skinparam backgroundColor White
 skinparam shadowing false
 
-' Enhanced visual styling
+' Visual styling
 skinparam class {
-    BackgroundColor #F8F9FA
-    BorderColor #6C757D
-    ArrowColor #495057
+    BackgroundColor White
+    BorderColor #333333
+    ArrowColor #666666
     FontSize 11
+    BorderThickness 2
+}
+
+skinparam package {
+    BorderColor #666666
+    FontStyle bold
+    BorderThickness 2
 }
 
 skinparam note {
-    BackgroundColor #FFF9E6
-    BorderColor #FFD700
-    FontSize 10
+    BackgroundColor #FFFACD
+    BorderColor #DAA520
+    FontSize 9
+    BorderThickness 2
 }
 
-title Bank Account Management System - Class Diagram
+title Bank Account Management System\nClass Diagram
 
-' ============================================
-'  CORE DOMAIN MODEL
-' ============================================
+left to right direction
 
-package "Core Banking Model" #E8F4F8 {
+' ========================================
+' DOMAIN MODEL - Account Hierarchy
+' ========================================
 
-' Abstract base class
-abstract class BankAccount {
-    - accountNumber: String {final}
-    - owner: String {final}
-    - balance: double
-    - status: AccountStatus
-    # transactionLog: List<Transaction>
-    - {static} ZERO_BALANCE: double
-    - {static} logger: Logger
-    __
-    + BankAccount(String, String)
-    + getOwner(): String
-    + getAccountNumber(): String
-    + getBalance(): double
-    + getTransactionLog(): List<Transaction>
-    + getStatus(): AccountStatus
-    __
-    + deposit(double): void
-    + transferTo(BankAccount, double): void
-    + printStatement(): void
-    + applyInterest(): void
-    __
-    + freezeAccount(String): void
-    + unfreezeAccount(String): void
-    + closeAccount(String): void
-    __
-    # withdrawInternal(double, TransactionType): void
-    # finalizeWithdrawal(double, TransactionType): void
-    # applyInterest(double): void
+package "banking.accounts" #E3F2FD {
+    
+    abstract class BankAccount {
+        - accountNumber: String
+        - owner: String
+        - balance: double
+        - status: AccountStatus
+        # transactionLog: List<Transaction>
+        --
+        + BankAccount(String, String)
+        --
+        + deposit(double): void
+        + withdraw(double): void
+        + transferTo(BankAccount, double): void
+        + applyInterest(): void
+        --
+        + freezeAccount(String): void
+        + unfreezeAccount(String): void
+        + closeAccount(String): void
+        --
+        # withdrawInternal(double, TransactionType): void
+        # finalizeWithdrawal(double, TransactionType): void
+    }
+    
+    note left of BankAccount
+      <b>Template Method Pattern</b>
+      
+      Abstract base class providing
+      common account operations.
+      
+      Subclasses customize withdrawal
+      behavior via withdrawInternal().
+    end note
+    
+    class CheckingAccount {
+        - overdraftLimit: double
+        - OVERDRAFT_FEE: double = 35.0
+        --
+        + CheckingAccount(String, String)
+        + CheckingAccount(String, String, double)
+        --
+        + withdraw(double): void
+        + getOverdraftLimit(): double
+    }
+    
+    note right of CheckingAccount
+      <b>Overdraft Support</b>
+      • Default limit: $500
+      • Fee: $35 per overdraft
+      • Can withdraw beyond balance
+    end note
+    
+    class SavingsAccount {
+        - interestRate: double
+        - DEFAULT_INTEREST_RATE: double = 0.02
+        --
+        + SavingsAccount(String, String)
+        + SavingsAccount(String, String, double)
+        --
+        + withdraw(double): void
+        + getInterestRate(): double
+    }
+    
+    note right of SavingsAccount
+      <b>Interest Bearing Account</b>
+      • No overdraft allowed
+      • Default rate: 2% annually
+      • Customizable interest rate
+    end note
+    
+    class User {
+        - username: String
+        - password: String
+        - linkedAccountId: String
+        --
+        + User(String, String, String)
+        --
+        + getUsername(): String
+        + getPassword(): String
+        + getLinkedAccountId(): String
+    }
+    
+    note left of User
+      <b>Authentication Model</b>
+      
+      Links user credentials
+      to bank account.
+    end note
+    
+    enum AccountStatus {
+        ACTIVE
+        FROZEN
+        CLOSED
+    }
+    
+    BankAccount <|-- CheckingAccount
+    BankAccount <|-- SavingsAccount
+    BankAccount --> AccountStatus
+    User --> BankAccount : links to
 }
 
-' Concrete implementations
-class CheckingAccount {
-    - overdraftLimit: double {final}
-    - {static} OVERDRAFT_FEE: double
-    - {static} DEFAULT_OVERDRAFT_LIMIT: double
-    __
-    + CheckingAccount(String, String)
-    + CheckingAccount(String, String, double)
-    __
-    + withdraw(double): void
-    + getOverdraftLimit(): double
-    + {static} getOverdraftFee(): double
+' ========================================
+' TRANSACTIONS & AUDIT
+' ========================================
+
+package "banking.transactions" #FFF3E0 {
+    
+    class Transaction {
+        - amount: double
+        - type: TransactionType
+        - timestamp: LocalDateTime
+        --
+        + Transaction(double, TransactionType)
+        --
+        + getAmount(): double
+        + getType(): TransactionType
+        + getTimestamp(): LocalDateTime
+    }
+    
+    note bottom of Transaction
+      <b>Immutable Audit Log</b>
+      
+      Thread-safe record of
+      all account activities.
+    end note
+    
+    enum TransactionType {
+        DEPOSIT
+        WITHDRAWAL
+        TRANSFER
+        FEE
+        INTEREST
+        REVERSAL
+    }
+    
+    Transaction --> TransactionType
 }
 
-class SavingsAccount {
-    - interestRate: double {final}
-    - {static} DEFAULT_INTEREST_RATE: double
-    __
-    + SavingsAccount(String, String)
-    + SavingsAccount(String, String, double)
-    __
-    + withdraw(double): void
-    + getInterestRate(): double
+BankAccount "1" o-- "many" Transaction
+
+' ========================================
+' EXCEPTIONS
+' ========================================
+
+package "banking.exceptions" #FFEBEE {
+    
+    class InvalidAmountException
+    class InsufficientFundsException
+    class AccountStatusException
+    class UserStatusException
+    class InvalidCredentialsException
 }
 
-class User {
-    - username: String {final}
-    - password: String {final}
-    - linkedAccountId: String {final}
-    __
-    + User(String, String, String)
-    + getUsername(): String
-    + getPassword(): String
-    + getLinkedAccountId(): String
+' ========================================
+' BANKING SERVICES
+' ========================================
+
+package "banking" #E8F5E9 {
+    
+    class Bank {
+        - accounts: ConcurrentHashMap
+        - users: ConcurrentHashMap
+        - scheduler: ScheduledExecutorService
+        --
+        + openAccount(BankAccount): void
+        + getAccount(String): BankAccount
+        --
+        + createNewCustomer(...): void
+        + authenticateUser(String, String): User
+        --
+        + payGlobalInterest(): void
+        + startInterestService(): void
+        + stopServices(): void
+        --
+        + saveData(): void
+        + loadData(): void
+    }
+    
+    note right of Bank
+      <b>Central Registry</b>
+      
+      • Thread-safe collections
+      • Scheduled interest payments
+      • Data persistence
+      • User management
+    end note
+    
+    class CentralBank <<Singleton>> {
+        - {static} instance: CentralBank
+        - interestRate: double
+        --
+        - CentralBank()
+        --
+        + {static} getInstance(): CentralBank
+        + getInterestRate(): double
+        + setInterestRate(double): void
+    }
+    
+    note right of CentralBank
+      <b>Singleton</b>
+      
+      Global interest
+      rate manager.
+    end note
+    
+    Bank "1" *-- "many" BankAccount : manages
+    Bank "1" *-- "many" User : registers
+    BankAccount ..> CentralBank : uses
 }
 
-class Transaction {
-    - amount: double {final}
-    - type: TransactionType {final}
-    - timestamp: LocalDateTime {final}
-    __
-    + Transaction(double, TransactionType)
-    + getAmount(): double
-    + getType(): TransactionType
-    + getTimestamp(): LocalDateTime
+' ========================================
+' APPLICATION LAYER
+' ========================================
+
+package "app" #F3E5F5 {
+    class BankApp <<Main>> {
+        + {static} main(String[]): void
+    }
 }
 
-}
+BankApp ..> Bank : uses
 
-' ============================================
-'  ENUMERATIONS
-' ============================================
+' ========================================
+' EXCEPTION DEPENDENCIES
+' ========================================
 
-package "Enumerations" #F0F8E8 {
-
-enum TransactionType {
-    DEPOSIT
-    WITHDRAWAL
-    TRANSFER
-    FEE
-    INTEREST
-    REVERSAL
-}
-
-enum AccountStatus {
-    ACTIVE
-    FROZEN
-    CLOSED
-}
-
-}
-
-' ============================================
-'  UTILITIES & SERVICES
-' ============================================
-
-package "Services" #F8F0E8 {
-
-class Bank {
-    - accounts: ConcurrentHashMap<String, BankAccount>
-    - users: ConcurrentHashMap<String, User>
-    - scheduler: ScheduledExecutorService
-    __
-    + openAccount(BankAccount): void
-    + getAccount(String): BankAccount
-    + payGlobalInterest(): void
-    + startInterestService(): void
-    + stopServices(): void
-    + saveData(): void
-    + loadData(): void
-    + createNewCustomer(String, String, String, String): void
-    + authenticateUser(String, String): User
-}
-
-class CentralBank <<Singleton>> {
-    - {static} instance: CentralBank
-    - interestRate: double
-    __
-    - CentralBank()
-    + {static} getInstance(): CentralBank
-    + getInterestRate(): double
-    + setInterestRate(double): void
-}
-
-}
-
-' ============================================
-'  EXCEPTIONS
-' ============================================
-
-package "Exceptions" #FFE8E8 {
-
-class InvalidAmountException <<Exception>> {
-    + InvalidAmountException(String)
-}
-
-class InsufficientFundsException <<Exception>> {
-    + InsufficientFundsException(String)
-}
-
-class AccountStatusException <<Exception>> {
-    + AccountStatusException(String)
-}
-
-class UserStatusException <<Exception>> {
-    + UserStatusException(String)
-}
-
-class InvalidCredentialsException <<Exception>> {
-    + InvalidCredentialsException(String)
-}
-
-}
-
-' ============================================
-'  APPLICATION LAYER
-' ============================================
-
-package "Application" #E8E8F8 {
-
-class BankApp <<Main>> {
-    + {static} main(String[]): void
-}
-
-}
-
-' ============================================
-'  RELATIONSHIPS
-Bank "1" *-- "0..*" BankAccount
-Bank "1" *-- "0..*" User
-
-' Associations
-User "1" --> "1" BankAccount : links to
-
-' Dependencies
-Transaction --> TransactionType
-BankAccount --> AccountStatus
-BankAccount ..> CentralBank : <<uses>>
-Bank ..> SavingsAccount : <<manages>>
-
-' Exception throwing
-BankAccount ..> InvalidAmountException : <<throws>>
-BankAccount ..> InsufficientFundsException : <<throws>>
-BankAccount ..> AccountStatusException : <<throws>>
-Bank ..> UserStatusException : <<throws>>
-Bank ..> InvalidCredentialsException : <<throws>>
-
-' Application usage
-BankApp ..> Bank : <<uses>>ountStatus
-BankAccount ..> CentralBank : <<uses>>
-
-' Exception throwing
-BankAccount ..> InvalidAmountException : <<throws>>
-BankAccount ..> InsufficientFundsException : <<throws>>
-BankAccount ..> AccountStatusException : <<throws>>
-
-' Application usage
-BankApp ..> CheckingAccount : <<creates>>
-BankApp ..> SavingsAccount : <<creates>>
-
-' ============================================
-'  NOTES
-' ============================================
-
-note top of BankAccount
-  <b>Template Method Pattern</b>
-  Abstract base providing common
-  functionality. Subclasses override
-  withdrawInternal() for custom logic.
-end note
-
-note right of CheckingAccount
-  <b>Overdraft Support</b>
-  • Limit: $500 (default)
-  • Fee: $35 (one-time)
-end note
-
-note right of SavingsAccount
-  <b>Interest Earning</b>
-  • No overdraft
-  • Custom interest rates
-  • Default: 2%
-end note
-
-note bottom of Transaction
-  <b>Immutable Record</b>
-  All fields final.
-  Thread-safe audit trail.
-end note
-
-note bottom of CentralBank
-  <b>Singleton Pattern</b>
-  Manages global
-  interest rates.
-end note
-
-' Layout hints
-CheckingAccount -[hidden]down- SavingsAccount
-InvalidAmountException -[hidden]right- InsufficientFundsException
-InsufficientFundsException -[hidden]right- AccountStatusException
+BankAccount ..> InvalidAmountException : throws
+BankAccount ..> InsufficientFundsException : throws
+BankAccount ..> AccountStatusException : throws
+Bank ..> UserStatusException : throws
+Bank ..> InvalidCredentialsException : throws
 
 @enduml

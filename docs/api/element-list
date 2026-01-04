@@ -1,1 +1,5 @@
-unnamed package
+app
+banking
+banking.accounts
+banking.exceptions
+banking.transactions

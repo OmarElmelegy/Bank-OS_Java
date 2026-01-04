@@ -40,7 +40,7 @@ public class BankApp {
         System.out.println("=== Welcome to the Banking System ===\n");
 
         myBank.loadData();
-        myBank.startInterestService();
+        myBank.startInterestService();  
 
         // Main menu loop
         while (true) {

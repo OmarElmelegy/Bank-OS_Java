@@ -144,6 +144,6 @@ public class CheckingAccount extends BankAccount {
     @Override
     public String toString() {
         return String.format("CheckingAccount[%s, owner=%s, balance=$%.2f, overdraftLimit=$%.2f]",
-                getAccountNumber(), getOwner(), getBalance(), overdraftLimit);
+                getAccountNumber(), getOwnerName(), getBalance(), overdraftLimit);
     }
 }

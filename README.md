@@ -1,779 +1,328 @@
 # Bank Account Management System
 
-A robust, object-oriented banking system implemented in Java, demonstrating key software engineering principles including inheritance, polymorphism, exception handling, and design patterns.
+A comprehensive Java banking system demonstrating OOP principles, design patterns, and software engineering best practices.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
-- [Class Diagram](#class-diagram)
 - [Getting Started](#getting-started)
 - [Usage Examples](#usage-examples)
-- [API Documentation](#api-documentation)
+- [API Reference](#api-reference)
 - [Design Patterns](#design-patterns)
 - [Exception Handling](#exception-handling)
 - [Testing](#testing)
-- [Project Structure](#project-structure)
 - [Requirements](#requirements)
-- [License](#license)
 
 ## 🎯 Overview
 
-The Bank Account Management System is a Java-based application that simulates real-world banking operations. It provides a flexible framework for managing different types of bank accounts with features like deposits, withdrawals, transfers, and interest calculations.
-
-### Key Highlights
-
-- **Type Safety**: Strongly typed with comprehensive validation
-- **Thread Safety**: Synchronized operations for concurrent access
-- **Immutability**: Transaction records are immutable for audit integrity
-- **Extensibility**: Abstract base class design allows easy addition of new account types
-- **Logging**: Built-in logging framework for audit trails
-- **Exception Safety**: Comprehensive exception handling with rollback mechanisms
+A Java 11+ banking system with account management, transaction processing, user authentication, and data persistence. Features thread-safe operations, immutable transaction records, extensible design, and automated background services.
 
 ## ✨ Features
 
-### Account Management
-- ✅ Multiple account types (Checking, Savings)
-- ✅ Account status management (Active, Frozen, Closed)
-- ✅ Unique account identification
-- ✅ Owner information tracking
-- ✅ **Persistent Storage**: Account data saved to disk using Java serialization
-- ✅ **Automatic Account Recovery**: Load existing accounts from previous sessions
-- ✅ **User Authentication**: Secure login with username/password
-- ✅ **User Registration**: Create new customers with linked accounts
+- **Account Types**: Checking (overdraft protection) and Savings (interest-earning)
+- **Operations**: Deposits, withdrawals, transfers with automatic rollback on failure
+- **Status Management**: Active, Frozen, and Closed account states
+- **User System**: Registration and authentication with password validation
+- **Data Persistence**: Java serialization (data/bank.dat) for session recovery
+- **Automated Interest**: Background service applies interest every 10 seconds
+- **Transaction Logging**: Immutable audit trail with type filtering
+- **Thread Safety**: ConcurrentHashMap for concurrent operations
 
-### Financial Operations
-- ✅ **Deposits**: Add funds with validation
-- ✅ **Withdrawals**: Remove funds with balance checks
-- ✅ **Transfers**: Move money between accounts with rollback on failure
-- ✅ **Interest Application**: Automatic interest calculation and application
-- ✅ **Scheduled Interest Service**: Background thread applies interest every 10 seconds (simulating nightly batches)
-
-### Account Types
-
-#### Checking Account
-- Overdraft protection up to configurable limit
-- Flat fee ($35) charged when entering overdraft
+### Checking Account
+- Configurable overdraft limit (default $500)
+- $35 flat fee when entering overdraft
 - No minimum balance requirement
-- Suitable for frequent transactions
 
-#### Savings Account
-- No overdraft protection (balance must stay positive)
-- Configurable interest rate (0-10%)
-- Interest-earning capability
-- Suitable for saving money
-
-### Transaction Management
-- Complete transaction history logging
-- Immutable transaction records
-- Transaction type categorization (DEPOSIT, WITHDRAWAL, TRANSFER, FEE, INTEREST, REVERSAL)
-- Timestamp tracking
-- Filter transactions by type
-- Transaction logs persisted with account data
-
-### Security & Validation
-- Account freeze/unfreeze capability
-- Account closure with balance verification
-- Null-safety with Objects.requireNonNull()
-- Amount validation (positive values only)
-- Status checks before operations
-
-### Bank Management
-- ✅ **Multi-account Management**: Bank class manages multiple accounts with thread-safe operations
-- ✅ **User Management**: Register users and authenticate credentials
-- ✅ **Data Persistence**: Save and load all accounts and users to/from disk (bank.dat)
-- ✅ **Interest Service**: Automated scheduled interest application to all savings accounts
-- ✅ **Account Registry**: Prevent duplicate accounts, retrieve accounts by ID
-- ✅ **Graceful Shutdown**: Proper cleanup of background services
+### Savings Account
+- No overdraft (balance must stay positive)
+- Configurable interest rate (default 2%)
+- Interest compounds on principal
 
 ## 🏗️ Architecture
 
-The system follows a **layered architecture** with clear separation of concerns:
+### Package Structure
 
 ```
-┌─────────────────────────────────────┐
-│     Presentation Layer              │
-│  (BankApp - Demo Application)       │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│     Business Logic Layer            │
-│  (Account Operations & Validation)  │
-│  - BankAccount (Abstract)           │
-│  - CheckingAccount                  │
-│  - SavingsAccount                   │
-│  - CentralBank (Singleton)          │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│     Data Layer                      │
-│  (Transaction Records & Enums)      │
-│  - Transaction                      │
-│  - TransactionType                  │
-│  - AccountStatus                    │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│     Exception Layer                 │
-│  - InvalidAmountException           │
-│  - InsufficientFundsException       │
-│  - UserStatusException              │
-│  - InvalidCredentialsException      │
-│  - AccountStatusException           │
-└─────────────────────────────────────┘
+banking/
+├── Bank.java                     # Account/user registry
+├── CentralBank.java              # Singleton for global rates
+├── accounts/
+│   ├── BankAccount.java          # Abstract base class
+│   ├── CheckingAccount.java     # Overdraft implementation
+│   ├── SavingsAccount.java      # Interest implementation
+│   ├── User.java                 # Authentication model
+│   └── AccountStatus.java        # ACTIVE/FROZEN/CLOSED enum
+├── transactions/
+│   ├── Transaction.java          # Immutable transaction record
+│   └── TransactionType.java     # Type enum
+└── exceptions/                   # Custom exception types
+
+app/
+└── BankApp.java                  # Demo application
 ```
 
-### Design Principles Applied
+### Class Diagram
 
-1. **SOLID Principles**
-   - **Single Responsibility**: Each class has one clear purpose
-   - **Open/Closed**: Open for extension (new account types), closed for modification
-   - **Liskov Substitution**: Subclasses can replace BankAccount transparently
-   - **Interface Segregation**: Focused interfaces without bloat
-   - **Dependency Inversion**: Depends on abstractions (BankAccount)
+![Class Diagram](out/docs/class-diagram.png)
 
-2. **DRY (Don't Repeat Yourself)**
-   - Common functionality in abstract base class
-   - Shared validation logic
+**Key Relationships:**
+- CheckingAccount & SavingsAccount extend BankAccount
+- Bank manages BankAccount and User instances
+- User links to BankAccount via account ID
+- BankAccount contains Transaction list
 
-3. **Fail-Fast**
-   - Early validation before state changes
-   - Immediate exception throwing on invalid input
+### Account Lifecycle
 
-## 📊 Class Diagram
+![Account Lifecycle](out/docs/account-lifecycle.png)
 
-![Class Diagram](out/docs/class-diagram/class-diagram.png)
+**State Transitions:**
+- **ACTIVE** → **FROZEN**: `freeze()` - Suspends operations
+- **FROZEN** → **ACTIVE**: `unfreeze()` - Restores operations
+- **ACTIVE/FROZEN** → **CLOSED**: `close()` - Permanent closure (requires $0 balance)
 
-*Figure 1: Complete system class diagram showing all relationships and design patterns*
+### Transfer Logic with Rollback
 
-See [`docs/class-diagram.puml`](docs/class-diagram.puml) for the PlantUML source.
-` manages multiple `BankAccount` and `User` instances
-- `User` links to a `BankAccount` via account ID
-- `Bank
-### Key Relationships
-- `CheckingAccount` and `SavingsAccount` extend `BankAccount`
-- `BankAccount` uses `Transaction` for logging
-- `Transaction` uses `TransactionType` enum
-- `BankAccount` uses `AccountStatus` enum
-- `CentralBank` is a singleton managing global interest rates
+![Transfer Sequence](out/docs/sequence-diagram.png)
 
-### Additional Diagrams
-
-#### Transfer Operation Flow
-![Transfer Sequence Diagram](out/docs/sequence-diagram/sequence-diagram.png)
-
-*Figure 2: Transfer operation with rollback mechanism*
-
-#### Account Lifecycle
-![Account Lifecycle Diagram](out/docs/account-lifecycle/account-lifecycle.png)
-
-*Figure 3: Account status state machine (ACTIVE → FROZEN → CLOSED)*
-
-> **Note:** To generate diagram images from PlantUML source files, use:
-> ```bash
-> # Generate all diagrams as PNG images
-> plantuml docs/*.puml -o ../out/docs
-> 
-> # Or use VS Code PlantUML extension:
-> # 1. Install "PlantUML" extension
-> # 2. Right-click on .puml file → "Export Current Diagram"
-> # 3. Choose PNG format and save to out/docs/
-> ```
+**Two-Phase Commit:**
+1. **Withdrawal Phase**: Deduct from source account
+2. **Deposit Phase**: Add to target account
+3. **Rollback**: If deposit fails, automatically reverse withdrawal
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Java 11 or higher
-- JUnit 5 (for testing)
-- Google Truth library (for assertions in tests)
-- Maven or Gradle (optional, for dependency management)
+- **Java 11+** (uses var, List.of(), LocalDateTime)
+- **JUnit 5** and **Google Truth** (for testing)
+- **PlantUML** (optional, for diagram generation)
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/OmarElmelegy/Bank-OS_Java.git
-   cd Bank-OS_Java
-   ```
+```bash
+# Clone repository
+git clone https://github.com/OmarElmelegy/Bank-OS_Java.git
+cd Bank-OS_Java
 
-2. **Compile the project**
-   ```bash
-   javac *.java
-   ```
+# Compile source code
+javac -d bin -cp "lib/*:." src/banking/**/*.java src/banking/*.java src/app/*.java
 
-3. **Run the demo application**
-   ```bash
-   java BankApp
-### Quick Start Example
+# Run application
+java -cp bin app.BankApp
 
-```java
-// Create bank and load saved data
-Bank myBank = new Bank();
-myBank.loadData();
+# Run tests
+java -cp "lib/*:bin" org.junit.platform.console.ConsoleLauncher --scan-class-path
+```
 
-// Create accounts
-CheckingAccount checking = new CheckingAccount("CHK001", "John Doe", 500.0);
-SavingsAccount savings = new SavingsAccount("SAV001", "Jane Smith", 0.03);
 
-// Register accounts
-myBank.openAccount(checking);
-myBank.openAccount(savings);
+## 🚀 Getting Started
 
-// Start automated interest service
-myBank.startInterestService();
+### Prerequisites
+- Java 11 or higher
+- JUnit 5 (included in `lib/`)
+- Google Truth library (included in `lib/`)
 
-// Deposit money
-checking.deposit(1000.0);
-savings.deposit(5000.0);
+### Quick Start
 
-// Withdraw money
-checking.withdraw(200.0);
+```bash
+# Compile
+javac -d bin src/app/*.java src/banking/**/*.java
 
-// Transfer between accounts
-checking.transferTo(savings, 300.0);
+# Run
+java -cp bin app.BankApp
 
-// Apply interest manually
-savings.applyInterest();
-
-// Print statements
-checking.printStatement();
-savings.printStatement();
-
-// Save data and cleanup
-myBank.stopServices();
-myBank.saveData();
-```cking.transferTo(savings, 300.0);
-
-// Apply interest
-savings.applyInterest();
-
-// Print statements
-checking.printStatement();
-savings.printStatement();
+# Test
+java -cp "lib/*:bin" org.junit.platform.console.ConsoleLauncher --scan-class-path
 ```
 
 ## 💡 Usage Examples
 
-### Creating Accounts
+### Creating and Managing Accounts
 
 ```java
-// Checking account with default overdraft ($500)
-CheckingAccount checking = new CheckingAccount("CHK001", "Alice");
+Bank bank = new Bank();
 
-// Checking account with custom overdraft
-CheckingAccount premium = new CheckingAccount("CHK002", "Bob", 1000.0);
+// Create accounts
+CheckingAccount checking = new CheckingAccount("C001", "Alice", 1000.0);
+SavingsAccount savings = new SavingsAccount("S001", "Bob", 5000.0);
 
-// Savings account with default interest rate (2%)
-SavingsAccount savings = new SavingsAccount("SAV001", "Charlie");
+bank.registerAccount(checking);
+bank.registerAccount(savings);
 
-// Savings account with custom interest rate (3.5%)
-SavingsAccount highYield = new SavingsAccount("SAV002", "Diana", 0.035);
+// Basic operations
+checking.deposit(500.0);      // Balance: $1500
+checking.withdraw(200.0);     // Balance: $1300
+checking.transfer(savings, 300.0);  // Checking: $1000, Savings: $5300
 ```
 
-### Deposits and Withdrawals
+### Overdraft Protection
 
 ```java
-try {
-    // Deposit
-    account.deposit(500.0);
-    
-    // Withdraw
-    account.withdraw(100.0);
-    
-} catch (InvalidAmountException e) {
-    System.err.println("Invalid amount: " + e.getMessage());
-} catch (InsufficientFundsException e) {
-    System.err.println("Not enough funds: " + e.getMessage());
-} catch (AccountStatusException e) {
-    System.err.println("Account issue: " + e.getMessage());
-}
-```
+CheckingAccount account = new CheckingAccount("C001", "Alice", 100.0);
+account.setOverdraftLimit(500.0);
 
-### Overdraft Protection (Checking Only)
-
-```java
-CheckingAccount checking = new CheckingAccount("CHK001", "User", 500.0);
-checking.deposit(100.0);  // Balance: $100
-
-// Withdraw more than balance but within overdraft
-checking.withdraw(400.0);  // Balance: -$300, Fee: $35 charged
-// Final balance: -$335
-```
-
-### Transfers with Rollback
-
-```java
-try {
-    sourceAccount.transferTo(targetAccount, 1000.0);
-    System.out.println("Transfer successful!");
-} catch (Exception e) {
-    // If transfer fails, amount is automatically returned to source
-    System.err.println("Transfer failed: " + e.getMessage());
-}
+account.withdraw(400.0);  // Balance: -$300 (overdraft)
+                          // $35 fee applied: -$335
 ```
 
 ### Account Status Management
 
 ```java
-// Freeze account
-account.freezeAccount("Suspicious activity detected");
+BankAccount account = bank.findAccount("C001");
 
-// Try to withdraw (will fail)
-try {
-    account.withdraw(100.0);
-} catch (AccountStatusException e) {
-    System.out.println("Operation blocked: " + e.getMessage());
-}
-
-// Unfreeze account
-account.unfreezeAccount("Verification completed");
-
-// Close account (balance must be zero)
-account.closeAccount("Customer request");
+account.freeze();     // Prevents operations
+account.unfreeze();   // Re-enables operations
+account.close();      // Permanent closure
 ```
 
-### Transaction History
+### User Authentication
 
 ```java
-// Get all transactions
-List<Transaction> allTransactions = account.getTransactionLog();
+// Register
+String accountId = bank.createNewCustomer("alice", "secure123");
 
-// Filter by type
-List<Transaction> deposits = account.getTransactionByType(TransactionType.DEPOSIT);
-List<Transaction> withdrawals = account.getTransactionByType(TransactionType.WITHDRAWAL);
-List<Transaction> fees = account.getTransactionByType(TransactionType.FEE);
+// Login
+User user = bank.authenticateUser("alice", "secure123");
+BankAccount account = bank.findAccount(user.getAccountId());
+```
 
-// Print statement
-### Central Bank Rate Management
+### Interest Application
 
 ```java
-CentralBank centralBank = CentralBank.getInstance();
+SavingsAccount savings = new SavingsAccount("S001", "Bob", 1000.0);
+savings.setInterestRate(0.05);  // 5%
 
-// Get current rate
-double rate = centralBank.getInterestRate();
-
-// Update rate (affects checking accounts)
-centralBank.setInterestRate(0.03); // 3%
+savings.applyInterest();  // Adds $50
 ```
 
-### Bank Operations
-
-```java
-// Create and initialize bank
-Bank myBank = new Bank();
-
-// Load saved accounts from previous session
-myBank.loadData();
-
-// Open new account
-### Core Classes
-
-#### Bank
-- `openAccount(BankAccount account)` - Register a new account
-- `getAccount(String id)` - Retrieand users to disk (bank.dat)
-- `loadData()` - Load accounts and users from disk
-- `createNewCustomer(String, String, String, String)` - Register new user with account
-- `authenticateUser(String, String)` - Validate user credentials to all savings accounts
-- `startInterestService()` - Start automated interest scheduler
-- `stopServices()` - Stop background services
-- `saveData()` - Persist accounts to disk (bank.dat)
-- `loadData()` - Load accounts from disk
-
-#### BankAccount (Abstract)
-- `deposit(double amount)` - Add funds
-- `withdraw(double amount)` - Remove funds (implemented by subclasses)
-- `transferTo(BankAccount target, double amount)` - Transfer money
-- `applyInterest()` - Apply interest
-- `getBalance()` - Get current balance
-- `getTransactionLog()` - Get transaction history
-- `printStatement()` - Print account statement
-- `freezeAccount(String reason)` - Freeze the account
-- `unfreezeAccount(String reason)` - Unfreeze the account
-- `closeAccount(String reason)` - Close the account permanently
-
-#### CheckingAccount
-- Constructor: `CheckingAccount(String id, String owner, double overdraftLimit)`
-- `getOverdraftLimit()` - Get overdraft limit
-- `getOverdraftFee()` - Get fee amount (static)
-
-#### SavingsAccount
-- Constructor: `SavingsAccount(String id, String owner, double interestRate)`
-- `getInterestRate()` - Get account interest rate
-
-#### Transaction
-- `getAmount()` - Get transaction amount
-- `getType()` - Get transaction type
-- `getTimestamp()` - Get transaction time
-
-#### AccountStatus (Enum)
-- `ACTIVE` - Account is operational
-- `FROZEN` - Account is temporarily blocked
-
-#### User
-- `getUsername()` - Get username
-- `getPassword()` - Get password
-- `getLinkedAccountId()` - Get associated account ID
-- `CLOSED` - Account is permanently closed
-
-#### CentralBank (Singleton)
-- `getInstance()` - Get singleton instance
-- `getInterestRate()` - Get default interest rate
-- `setInterestRate(double rate)` - Set default interest rate
-
-// Stop background services
-myBank.stopServices();
-```
-
-### Data Persistence
-
-```java
-Bank myBank = new Bank();
-
-// Load saved data from disk (bank.dat)
-myBank.loadData(); // Silently returns if file doesn't exist
-
-// ... perform operations ...
-
-// Save all account data to disk
-myBank.saveData(); // Creates/overwrites bank.dat
-```ingsAccount highYield = new SavingsAccount("SAV001", "User", 0.05);
-highYield.deposit(10000.0);
-highYield.applyInterest(); // Uses 5% instead of central bank rate
-```
-
-### Central Bank Rate Management
-
-```java
-CentralBank centralBank = CentralBank.getInstance();
-
-// Get current rate
-double rate = centralBank.getInterestRate();
-
-// Update rate (affects checking accounts)
-centralBank.setInterestRate(0.03); // 3%
-```
-
-## 📚 API Documentation
-
-Full API documentation is available in JavaDoc format. Generate it using:
-
-```bash
-javadoc -d docs/api -sourcepath . -subpackages .
-```
-
-Or view the pre-generated documentation in [`docs/index.html`](docs/index.html).
+## 📚 API Reference
 
 ### Core Classes
 
-#### BankAccount (Abstract)
-- `deposit(double amount)` - Add funds
-- `withdraw(double amount)` - Remove funds (implemented by subclasses)
-- `transferTo(BankAccount target, double amount)` - Transfer money
-- `applyInterest()` - Apply interest
-- `getBalance()` - Get current balance
-- `getTransactionLog()` - Get transaction history
-- `printStatement()` - Print account statement
-
-#### CheckingAccount
-- Constructor: `CheckingAccount(String id, String owner, double overdraftLimit)`
-- `getOverdraftLimit()` - Get overdraft limit
-- `getOverdraftFee()` - Get fee amount (static)
-
-#### SavingsAccount
-- Constructor: `SavingsAccount(String id, String owner, double interestRate)`
-- `getInterestRate()` - Get account interest rate
-
-#### Transaction
-- `getAmount()` - Get transaction amount
-- `getType()` - Get transaction type
-- `getTimestamp()` - Get transaction time
-
-## 🎨 Design Patterns
-
-### 1. Template Method Pattern
-**Location**: `BankAccount.withdrawInternal()`
-
-The abstract base class defines the skeleton of withdrawal operations:
-- Validate account status
-- Validate amount
-- Delegate to subclass for specific rules
-- Finalize withdrawal with `finalizeWithdrawal()`
-
-```java
-// In BankAccount
-protected synchronized void withdrawInternal(double amount, TransactionType type) {
-    // Common validation
-    validateStatus();
-    validateAmount(amount);
-    // Subclass implements specific logic
-}
-
-// In CheckingAccount
-@Override
-protected void withdrawInternal(double amount, TransactionType type) {
-    super.withdrawInternal(amount, type);
-    // Check overdraft limit
-    // Apply fee if needed
-    finalizeWithdrawal(amount, type);
-}
-```
-
-### 2. Singleton Pattern
-**Location**: `CentralBank`
-
-Ensures only one instance manages global interest rates:
-
-```java
-public class CentralBank {
-    private static CentralBank instance;
-    
-    private CentralBank() { }
-    
-    public static synchronized CentralBank getInstance() {
-        if (instance == null) {
-            instance = new CentralBank();
-        }
-        return instance;
-    }
-}
-```
-
-### 3. Immutable Object Pattern
-**Location**: `Transaction`
-
-Transaction records are immutable for audit integrity:
-- All fields are `final`
-- No setters provided
-- Timestamp set at creation
-
-### 4. Strategy Pattern (Implicit)
-Different account types implement different withdrawal strategies:
-- **CheckingAccount**: Allow overdraft with fees
-- **SavingsAccount**: Strict balance enforcement
-
-## ⚠️ Exception Handling
+| Class | Key Methods | Description |
+|-------|-------------|-------------|
+| **Bank** | `registerAccount()`, `findAccount()`, `createNewCustomer()`, `authenticateUser()` | Account and user registry |
+| **BankAccount** | `deposit()`, `withdraw()`, `transfer()`, `getBalance()`, `freeze()`, `close()` | Abstract account base |
+| **CheckingAccount** | `setOverdraftLimit()`, `isInOverdraft()` | Overdraft protection |
+| **SavingsAccount** | `setInterestRate()`, `applyInterest()` | Interest-earning account |
+| **User** | `getUsername()`, `getAccountId()`, `validatePassword()` | Authentication model |
+| **Transaction** | `getAmount()`, `getType()`, `getTimestamp()` | Immutable transaction record |
+| **CentralBank** | `getInstance()`, `getInterestRate()`, `setInterestRate()` | Global rate singleton |
 
 ### Exception Hierarchy
 
-```
-Exception
-└── RuntimeException
-    ├── InvalidAmountException
-    ├── InsufficientFundsException
-    └── AccountStatusException
-```
-UserStatusException` | Username already exists during registration |
-| | Invalid account type specified |
-| `InvalidCredentialsException` | Username doesn't exist during login |
-| | Password is incorrect |
-| `
-### When Exceptions Are Thrown
+| Exception | Trigger Condition |
+|-----------|------------------|
+| `InvalidAmountException` | Amount ≤ 0 or NaN |
+| `InsufficientFundsException` | Balance insufficient for withdrawal |
+| `AccountStatusException` | Operation on FROZEN/CLOSED account |
+| `UserStatusException` | Invalid user state |
+| `InvalidCredentialsException` | Authentication failure |
 
-| Exception | Thrown When |
-|-----------|-------------|
-| `InvalidAmountException` | Amount ≤ 0 for deposit/withdrawal/transfer |
-| `InsufficientFundsException` | Withdrawal exceeds available balance + overdraft |
-| `AccountStatusException` | Operation attempted on frozen/closed account |
-| | Account opened with duplicate ID |
-| | Account retrieved that doesn't exist |
-| | Account closed with non-zero balance |
-| `IllegalArgumentException` | Invalid constructor arguments (null, empty, negative) |
-| `NullPointerException` | Null account number or owner |
+## 🎨 Design Patterns
 
-### Rollback Mechanism
+### Template Method
+`BankAccount.withdraw()` defines algorithm, subclasses override `withdrawInternal()` for overdraft/interest logic.
 
-Transfers use a **two-phase commit** with automatic rollback:
+### Singleton
+`CentralBank.getInstance()` ensures one global rate manager.
 
-1. **Phase 1**: Withdraw from source
-2. **Phase 2**: Deposit to target
-3. **On Failure**: Automatically return funds to source with `REVERSAL` transaction
+### Factory Method
+`Bank.createNewCustomer()` encapsulates account+user creation logic.
+
+The abstract base class defines the skeleton of withdrawal operations, allowing subclasses to customize specific steps:
 
 ```java
+
+
+```java
+// BankAccount.withdraw() - template method
+public void withdraw(double amount) throws Exception {
+    withdrawInternal(amount, TransactionType.WITHDRAWAL);
+}
+
+// Subclasses override withdrawInternal()
+// CheckingAccount: overdraft + fee logic
+// SavingsAccount: no overdraft allowed
+```
+
+### Exception Handling
+
+**Custom Exceptions:**
+- `InvalidAmountException` - Amount ≤ 0
+- `InsufficientFundsException` - Balance too low
+- `AccountStatusException` - Operation on FROZEN/CLOSED account
+- `UserStatusException` - Invalid user state
+- `InvalidCredentialsException` - Authentication failure
+
+**Transfer Rollback:**
+```java
+// Two-phase commit with automatic rollback
 try {
-    source.withdrawInternal(amount, TRANSFER);
-    target.deposit(amount, TRANSFER);
+    withdrawInternal(amount, TransactionType.TRANSFER);
+    target.deposit(amount);
 } catch (Exception e) {
-    source.deposit(amount, REVERSAL); // Automatic rollback
-    throw new RuntimeException("Transfer failed", e);
+    deposit(amount, TransactionType.REVERSAL);  // Rollback
+    throw new RuntimeException("Transfer failed, funds returned", e);
 }
 ```
 
 ## 🧪 Testing
 
-### Test Coverage
+**53 tests (100% passing):**
 
-The project includes comprehensive unit tests in [`tests/BankSystemTest.java`](tests/BankSystemTest.java) with **27 test cases** covering all core functionality:
-
-#### Basic Operations (12 tests)
-- ✅ Account creation and initialization
-- ✅ Deposit operations (positive, negative, zero amounts)
-- ✅ Withdrawal operations (sufficient/insufficient funds)
-- ✅ Multiple transactions on same account
-- ✅ Transaction immutability and correctness
-- ✅ Empty account statement generation
-
-#### Account Types (3 tests)
-- ✅ Checking account overdraft protection
-- ✅ Overdraft fee application ($35 flat fee)
-- ✅ Savings account custom interest rates
-
-#### Transfer Operations (2 tests)
-- ✅ Successful transfers between accounts
-- ✅ Transfer failure with insufficient funds
-- ✅ Transfer to frozen account with automatic rollback
-
-#### Account Status Management (6 tests)
-- ✅ Account freeze functionality
-- ✅ Account unfreeze and status restoration
-- ✅ Account closure with zero balance requirement
-- ✅ Account closure rejection with non-zero balance
-- ✅ Operations blocked on closed accounts
-- ✅ Default account status verification (ACTIVE)
-
-#### Transaction Management (2 tests)
-- ✅ Transaction log filtering by type
-- ✅ Transaction type enum validation
-
-#### Interest Application (2 tests)
-- ✅ Interest calculation and application (5% rate)
-- ✅ Interest blocked on frozen accounts
-
-### Running Tests
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| CheckingAccountTest | 5 | Overdraft limits, fees |
+| SavingsAccountTest | 6 | Interest rates |
+| AccountTransactionTest | 14 | Deposits, withdrawals, transfers |
+| AccountLifecycleTest | 10 | Freeze, unfreeze, close |
+| TransactionTest | 8 | Immutability, filtering |
+| UserAuthenticationTest | 10 | Registration, login |
 
 ```bash
-# Using the provided script
-./scripts/run-tests.sh
+# Run all tests
+java -cp "lib/*:bin" org.junit.platform.console.ConsoleLauncher --scan-class-path
+```
 
-# Expected output: 27 tests passed
-```User.java                     # User authentication model
-├── BankAccount.java              # Abstract base class
-├── CheckingAccount.java          # Checking account implementation
-├── SavingsAccount.java           # Savings account implementation
-├── Transaction.java              # Transaction record (immutable)
-├── TransactionType.java          # Transaction type enum
-├── AccountStatus.java            # Account status enum
-├── CentralBank.java              # Singleton for global rates
-├── InvalidAmountException.java   # Custom exception
-├── InsufficientFundsException.java # Custom exception
-├── AccountStatusException.java   # Custom exception
-├── UserStatusException.java      # Custom exception
-├── InvalidCredentialsException.java
 ## 📁 Project Structure
 
 ```
 BankSystem/
-├── Bank.java                     # Bank management and persistence
-├── BankAccount.java              # Abstract base class
-├── CheckingAccount.java          # Checking account implementation
-├── SavingsAccount.java           # Savings account implementation
-├── Transaction.java              # Transaction record (immutable)
-├── TransactionType.java          # Transaction type enum
-├── AccountStatus.java            # Account status enum
-├── CentralBank.java              # Singleton for global rates
-├── InvalidAmountException.java   # Custom exception
-├── InsufficientFundsException.java # Custom exception
-├── AccountStatusException.java   # Custom exception
-├── BankApp.java                  # Interactive demo application
-├── bank.dat                      # Serialized account data (created at runtime)
-├── bin/                          # Compiled .class files
-├── tests/
-│   └── BankSystemTest.java       # JUnit test suite
-├── lib/                          # External dependencies
-│   ├── junit-platform-console-standalone-1.10.1.jar
-│   └── truth-1.1.5.jar
-├── scripts/
-│   └── run-tests.sh              # Test execution script
-├── docs/
-│   ├── api/                      # JavaDoc HTML documentation
-│   │   └── index.html            # JavaDoc entry point
-│   ├── class-diagram.puml        # PlantUML class diagram
-│   ├── sequence-diagram.puml     # PlantUML sequence diagram
-│   ├── overdraft-sequence.puml   # Overdraft flow diagram
-│   └── account-lifecycle.puml    # State machine diagram
-├── out/
-│   └── docs/                     # Generated diagram images
-│       ├── class-diagram.png     # Class diagram image
-│       ├── sequence-diagram.png  # Transfer sequence image
-│       ├── overdraft-sequence.png # Overdraft flow image
-│       └── account-lifecycle.png # State machine image
-├── README.md                     # This file
-└── LICENSE                       # License information
+├── src/banking/           # Core domain
+│   ├── accounts/          # Account models
+│   ├── transactions/      # Transaction tracking
+│   └── exceptions/        # Custom exceptions
+├── tests/                 # JUnit 5 tests
+├── lib/                   # Dependencies
+├── data/                  # Persistent data
+│   └── bank.dat          # Serialized accounts/users
+├── docs/                  # Documentation
+│   ├── class-diagram.png
+│   └── api/              # Javadoc HTML
+├── out/docs/             # Generated diagrams
+└── bin/                   # Compiled classes
 ```
+
+## 📖 Documentation
+
+- **Javadoc**: [docs/api/index.html](docs/api/index.html)
+- **Class Diagram**: [docs/class-diagram.png](docs/class-diagram.png)
+- **Source**: [docs/class-diagram.puml](docs/class-diagram.puml)
+│   └── app/
+│       └── BankApp.java                  # Demo application
+├── tests/
+│   ├── CheckingAccountTest.java
+│   ├── SavingsAccountTest.java
+│   ├── AccountTransactionTest.java
+│   ├── AccountLifecycleTest.java
 
 ## 🔧 Requirements
 
-### Runtime
-- **Java**: 11 or higher (uses `var`, `List.of()`, etc.)
-- **JVM**: Any standard JVM implementation
+- **Java 11+** (LocalDateTime, var, Optional)
+- **JUnit 5** (Jupiter 5.10.1+)
+- **Google Truth** (1.1.5+)
 
-### Development
-- **IDE**: IntelliJ IDEA, Eclipse, or VS Code recommended
-- **Build Tool**: Maven or Gradle (optional)
-
-### Testing
-- **JUnit**: 5.x
-- **Google Truth**: Latest version
-- **Mockito**: Optional for advanced testing
-
-### Dependencies
-
-```xml
-<!-- Maven dependencies -->
-<dependencies>
-    <!-- JUnit 5 -->
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter</artifactId>
-        <version>5.10.1</version>
-        <scope>test</scope>
-    </dependency>
-    
-    <!-- Google Truth -->
-    <dependency>
-        <groupId>com.google.truth</groupId>
-        <artifactId>truth</artifactId>
-        <version>1.1.5</version>
-        <scope>test</scope>
-    </dependency>
-</dependencies>
-```
-
-## 🎓 Learning Objectives
-
-This project demonstrates:
-
-1. **Object-Oriented Programming**
-   - Inheritance and polymorphism
-   - Encapsulation and data hiding
-   - Abstract classes and interfaces
-
-2. **Exception Handling**
-   - Custom exceptions
-   - Exception propagation
-   - Rollback mechanisms
-
-3. **Design Patterns**
-   - Singleton pattern
-   - Template method pattern
-   - Immutable objects
-   - Scheduled executor service
-   - Serialization for persistence
-
-4. **Best Practices**
-   - Input validation
-   - Thread safety with ConcurrentHashMap
-   - Scheduled background services
-   - Data persistence and serialization
-   - Logging and auditing
-   - Comprehensive documentation
-   - Resource cleanup (scheduler shutdown)
-
-5. **Testing**
-   - Unit testing with JUnit
-   - Assertion libraries
-   - Test organization
 ---
-
-**Made with ❤️ for learning Java and software engineering principles**

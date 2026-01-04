@@ -1,12 +1,26 @@
 
 package banking;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import banking.accounts.*;
-import banking.exceptions.*;
+import banking.accounts.BankAccount;
+import banking.accounts.CheckingAccount;
+import banking.accounts.SavingsAccount;
+import banking.accounts.User;
+import banking.exceptions.AccountStatusException;
+import banking.exceptions.InvalidCredentialsException;
+import banking.exceptions.UserStatusException;
 
 /**
  * Manages a collection of bank accounts with persistence and scheduled interest
@@ -123,15 +137,15 @@ public class Bank implements Serializable {
      * Persists all bank account data to disk using Java serialization.
      * 
      * <p>
-     * The accounts map is serialized to a file named "bank.dat" in the current
-     * working directory. This allows account data to be preserved between
+     * The accounts map is serialized to a file named "bank.dat" in the data/
+     * directory. This allows account data to be preserved between
      * application runs.
      * 
      * <p>
      * Note: The scheduler is marked as transient and is not serialized.
      */
     public void saveData() {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("bank.dat"))) {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("data/bank.dat"))) {
             out.writeObject(this.accounts);
             out.writeObject(this.users);
             System.out.println("[SYSTEM] Bank data saved to disk.");
@@ -144,7 +158,8 @@ public class Bank implements Serializable {
      * Loads previously saved bank account data from disk.
      * 
      * <p>
-     * Attempts to deserialize account data from "bank.dat". If the file doesn't
+     * Attempts to deserialize account data from "data/bank.dat". If the file
+     * doesn't
      * exist, the method returns silently. If the file exists but cannot be read,
      * an error message is printed.
      * 
@@ -154,7 +169,7 @@ public class Bank implements Serializable {
      */
     @SuppressWarnings("unchecked")
     public void loadData() {
-        File file = new File("bank.dat");
+        File file = new File("data/bank.dat");
         if (!file.exists())
             return;
 
@@ -177,35 +192,65 @@ public class Bank implements Serializable {
         }
     }
 
-    public void createNewCustomer(String username, String password, String ownerName, String accountType) throws AccountStatusException, UserStatusException {
+    /**
+     * Registers a new customer with a user account and bank account.
+     * 
+     * <p>
+     * This method creates both a User (for authentication) and a BankAccount
+     * (Savings or Checking) in a single operation. The account ID is generated
+     * automatically using UUID.
+     * 
+     * @param username    the username for authentication (must be unique)
+     * @param password    the password for the user
+     * @param ownerName   the name of the account owner
+     * @param accountType either "savings" or "checking" (case-insensitive)
+     * @throws UserStatusException    if the username already exists
+     * @throws AccountStatusException if the account type is invalid
+     */
+    public void createNewCustomer(String username, String password, String ownerName, String accountType)
+            throws AccountStatusException, UserStatusException {
         if (users.containsKey(username)) {
             throw new UserStatusException("ERROR: Username already exists");
         }
 
+        // Generate unique account ID
         String accountID = UUID.randomUUID().toString();
 
-        if (!accounts.containsKey(accountID)) {
-            throw new UserStatusException("ERROR: account ID does not exist");
-        }
-
-        User newUser = new User(username, password, accountID);
-        users.put(username, newUser);
-
+        // Create account based on type
+        BankAccount newAccount;
         if (accountType.trim().equalsIgnoreCase("savings")) {
-            SavingsAccount newAccount = new SavingsAccount(accountID, ownerName);
-            this.openAccount(newAccount); 
-        }
-
-        else if (accountType.trim().equalsIgnoreCase("checking")) {
-            CheckingAccount newAccount = new CheckingAccount(accountID, ownerName);
-            this.openAccount(newAccount);
-        }
-        
-        else {
+            newAccount = new SavingsAccount(accountID, ownerName);
+        } else if (accountType.trim().equalsIgnoreCase("checking")) {
+            newAccount = new CheckingAccount(accountID, ownerName);
+        } else {
             throw new AccountStatusException("ERROR: account type is not available");
         }
+
+        // Register account in bank
+        this.openAccount(newAccount);
+
+        // Create and register user linked to account
+        User newUser = new User(username, password, accountID);
+        users.put(username, newUser);
     }
 
+    /**
+     * Authenticates a user with their username and password.
+     * 
+     * <p>
+     * Validates the username exists and the password matches. Returns the
+     * User object if authentication succeeds.
+     * 
+     * <p>
+     * Note: In a production system, passwords should be hashed using a
+     * secure algorithm like bcrypt or PBKDF2.
+     * 
+     * @param username the username to authenticate
+     * @param password the password to verify
+     * @return the authenticated User object
+     * @throws InvalidCredentialsException if username doesn't exist or password is
+     *                                     incorrect
+     */
     public User authenticateUser(String username, String password) throws InvalidCredentialsException {
         if (!users.containsKey(username)) {
             throw new InvalidCredentialsException("ERROR: Username does not exist");
