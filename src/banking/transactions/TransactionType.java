@@ -1,3 +1,6 @@
+
+package banking.transactions;
+
 /**
  * Represents the type of a banking transaction.
  * 

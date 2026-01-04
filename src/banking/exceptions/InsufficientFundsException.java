@@ -1,3 +1,6 @@
+
+package banking.exceptions;
+
 /**
  * Exception thrown when an account has insufficient funds for a transaction.
  * 

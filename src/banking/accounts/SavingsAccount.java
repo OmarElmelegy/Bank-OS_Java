@@ -1,3 +1,10 @@
+package banking.accounts;
+
+import banking.exceptions.AccountStatusException;
+import banking.exceptions.InsufficientFundsException;
+import banking.exceptions.InvalidAmountException;
+import banking.transactions.TransactionType;
+
 /**
  * A savings account that earns interest and requires a positive balance.
  * 
@@ -67,7 +74,7 @@ public class SavingsAccount extends BankAccount {
      * instead of the central bank's default rate.
      */
     @Override
-    public void applyInterest() throws AccountStatusException{
+    public void applyInterest() throws AccountStatusException {
         super.applyInterest(interestRate);
     }
 
@@ -82,7 +89,8 @@ public class SavingsAccount extends BankAccount {
      * @throws InsufficientFundsException if balance is insufficient
      * @throws InvalidAmountException     if amount is zero or negative
      */
-    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
+    public void withdraw(double amount)
+            throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
         withdrawInternal(amount, TransactionType.WITHDRAWAL);
     }
 

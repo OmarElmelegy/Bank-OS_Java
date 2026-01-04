@@ -1,3 +1,6 @@
+
+package banking;
+
 /**
  * Singleton class representing the central bank that sets the default interest
  * rate.

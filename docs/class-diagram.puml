@@ -86,6 +86,17 @@ class SavingsAccount {
     + getInterestRate(): double
 }
 
+class User {
+    - username: String {final}
+    - password: String {final}
+    - linkedAccountId: String {final}
+    __
+    + User(String, String, String)
+    + getUsername(): String
+    + getPassword(): String
+    + getLinkedAccountId(): String
+}
+
 class Transaction {
     - amount: double {final}
     - type: TransactionType {final}
@@ -128,6 +139,22 @@ enum AccountStatus {
 
 package "Services" #F8F0E8 {
 
+class Bank {
+    - accounts: ConcurrentHashMap<String, BankAccount>
+    - users: ConcurrentHashMap<String, User>
+    - scheduler: ScheduledExecutorService
+    __
+    + openAccount(BankAccount): void
+    + getAccount(String): BankAccount
+    + payGlobalInterest(): void
+    + startInterestService(): void
+    + stopServices(): void
+    + saveData(): void
+    + loadData(): void
+    + createNewCustomer(String, String, String, String): void
+    + authenticateUser(String, String): User
+}
+
 class CentralBank <<Singleton>> {
     - {static} instance: CentralBank
     - interestRate: double
@@ -158,6 +185,14 @@ class AccountStatusException <<Exception>> {
     + AccountStatusException(String)
 }
 
+class UserStatusException <<Exception>> {
+    + UserStatusException(String)
+}
+
+class InvalidCredentialsException <<Exception>> {
+    + InvalidCredentialsException(String)
+}
+
 }
 
 ' ============================================
@@ -174,18 +209,27 @@ class BankApp <<Main>> {
 
 ' ============================================
 '  RELATIONSHIPS
-' ============================================
+Bank "1" *-- "0..*" BankAccount
+Bank "1" *-- "0..*" User
 
-' Inheritance
-BankAccount <|-- CheckingAccount
-BankAccount <|-- SavingsAccount
-
-' Composition
-BankAccount "1" *-- "0..*" Transaction
+' Associations
+User "1" --> "1" BankAccount : links to
 
 ' Dependencies
 Transaction --> TransactionType
 BankAccount --> AccountStatus
+BankAccount ..> CentralBank : <<uses>>
+Bank ..> SavingsAccount : <<manages>>
+
+' Exception throwing
+BankAccount ..> InvalidAmountException : <<throws>>
+BankAccount ..> InsufficientFundsException : <<throws>>
+BankAccount ..> AccountStatusException : <<throws>>
+Bank ..> UserStatusException : <<throws>>
+Bank ..> InvalidCredentialsException : <<throws>>
+
+' Application usage
+BankApp ..> Bank : <<uses>>ountStatus
 BankAccount ..> CentralBank : <<uses>>
 
 ' Exception throwing

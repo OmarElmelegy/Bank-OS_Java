@@ -1,3 +1,6 @@
+
+package banking.exceptions;
+
 /**
  * Exception thrown when an invalid transaction amount is provided.
  * 

@@ -1,9 +1,19 @@
+package banking.accounts;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import banking.CentralBank;
+import banking.exceptions.AccountStatusException;
+import banking.exceptions.InsufficientFundsException;
+import banking.exceptions.InvalidAmountException;
+import banking.transactions.Transaction;
+import banking.transactions.TransactionType;
 
 /**
  * Abstract base class representing a bank account.
@@ -30,7 +40,7 @@ import java.util.stream.Collectors;
  * @see CheckingAccount
  * @see SavingsAccount
  */
-public abstract class BankAccount {
+public abstract class BankAccount implements Serializable {
     private final String accountNumber;
     private final String owner;
     private double balance;
@@ -78,7 +88,7 @@ public abstract class BankAccount {
      * 
      * @return the owner's name
      */
-    public String getOwner() {
+    public String getOwnerName() {
         return this.owner;
     }
 
@@ -188,11 +198,8 @@ public abstract class BankAccount {
         Transaction tempTransaction = new Transaction(amount, type);
         transactionLog.add(tempTransaction);
 
-        // Always log the action
-        System.out.printf("%s: $%.2f (New Balance: $%.2f)%n",
-                type, amount, this.balance);
-
-        logger.info("Deposit successful. New Balance: $" + this.balance);
+        // Use logging framework instead of console output
+        logger.info(String.format("%s: $%.2f (New Balance: $%.2f)", type, amount, this.balance));
     }
 
     protected synchronized void withdrawInternal(double amount, TransactionType type)
@@ -215,6 +222,9 @@ public abstract class BankAccount {
         this.balance -= amount;
         Transaction tempTransaction = new Transaction(amount, type);
         transactionLog.add(tempTransaction);
+
+        // Use logging framework instead of console output
+        logger.info(String.format("%s: $%.2f (New Balance: $%.2f)", type, amount, this.balance));
     }
 
     /**
@@ -260,7 +270,7 @@ public abstract class BankAccount {
      * @throws AccountStatusException     if either account is not active
      * @throws IllegalArgumentException   if target is the same as this account
      */
-    public synchronized void transferTo(BankAccount target, double amount)
+    public synchronized void transfer(BankAccount target, double amount)
             throws InvalidAmountException, InsufficientFundsException, AccountStatusException {
 
         // Validate before any state changes
@@ -350,7 +360,7 @@ public abstract class BankAccount {
         double profit = this.balance * interestRate;
 
         if (profit <= 0) {
-            System.out.println("No interest applied (zero profit)");
+            logger.info("No interest applied (zero or negative profit)");
             return;
         }
         if (this.status != AccountStatus.ACTIVE) {
@@ -362,7 +372,7 @@ public abstract class BankAccount {
             System.out.printf("Interest applied: $%.2f (rate: %.2f%%)%n",
                     profit, interestRate * 100);
         } catch (Exception e) {
-            System.err.println("Interest operation failed: " + e.getMessage());
+            logger.warning("Interest operation failed: " + e.getMessage());
         }
     }
 

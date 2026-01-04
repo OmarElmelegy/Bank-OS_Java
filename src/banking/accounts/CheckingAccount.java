@@ -1,3 +1,11 @@
+
+package banking.accounts;
+
+import banking.exceptions.AccountStatusException;
+import banking.exceptions.InsufficientFundsException;
+import banking.exceptions.InvalidAmountException;
+import banking.transactions.TransactionType;
+
 /**
  * A checking account with overdraft protection.
  * 
@@ -85,7 +93,8 @@ public class CheckingAccount extends BankAccount {
      * @throws InsufficientFundsException if withdrawal would exceed overdraft limit
      * @throws InvalidAmountException     if amount is zero or negative
      */
-    public void withdraw(double amount) throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
+    public void withdraw(double amount)
+            throws InsufficientFundsException, InvalidAmountException, AccountStatusException {
         withdrawInternal(amount, TransactionType.WITHDRAWAL);
     }
 
@@ -128,8 +137,7 @@ public class CheckingAccount extends BankAccount {
         // Only charge fee if balance BECAME negative
         if (wasNonNegative && this.getBalance() < ZERO_BALANCE) {
             finalizeWithdrawal(OVERDRAFT_FEE, TransactionType.FEE);
-            System.err.printf("OVERDRAFT FEE: $%.2f charged to account %s (went into overdraft)%n",
-                    feeAmount, this.getAccountNumber());
+            System.out.printf("WARNING: Overdraft fee of $%.2f charged%n", OVERDRAFT_FEE);
         }
     }
 

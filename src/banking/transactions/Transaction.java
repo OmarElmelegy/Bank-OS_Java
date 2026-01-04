@@ -1,3 +1,7 @@
+
+package banking.transactions;
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -22,7 +26,7 @@ import java.util.UUID;
  * @version 1.0
  * @see TransactionType
  */
-public final class Transaction {
+public final class Transaction implements Serializable {
     private final String id;
     private final double amount;
     private final TransactionType type;
