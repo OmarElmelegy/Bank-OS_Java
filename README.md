@@ -295,6 +295,13 @@ BankSystem/
 │   ├── accounts/          # Account models
 │   ├── transactions/      # Transaction tracking
 │   └── exceptions/        # Custom exceptions
+│   └── app/
+│       └── BankApp.java                  # Demo application
+├── tests/
+│   ├── CheckingAccountTest.java
+│   ├── SavingsAccountTest.java
+│   ├── AccountTransactionTest.java
+│   ├── AccountLifecycleTest.java
 ├── tests/                 # JUnit 5 tests
 ├── lib/                   # Dependencies
 ├── data/                  # Persistent data
@@ -311,13 +318,6 @@ BankSystem/
 - **Javadoc**: [docs/api/index.html](docs/api/index.html)
 - **Class Diagram**: [docs/class-diagram.png](docs/class-diagram.png)
 - **Source**: [docs/class-diagram.puml](docs/class-diagram.puml)
-│   └── app/
-│       └── BankApp.java                  # Demo application
-├── tests/
-│   ├── CheckingAccountTest.java
-│   ├── SavingsAccountTest.java
-│   ├── AccountTransactionTest.java
-│   ├── AccountLifecycleTest.java
 
 ## 🔧 Requirements
 
