@@ -6,9 +6,11 @@ import banking.Bank;
 import banking.accounts.BankAccount;
 import banking.accounts.CheckingAccount;
 import banking.accounts.SavingsAccount;
+import banking.accounts.User;
 import banking.exceptions.AccountStatusException;
 import banking.exceptions.InsufficientFundsException;
 import banking.exceptions.InvalidAmountException;
+import banking.exceptions.InvalidCredentialsException;
 
 /**
  * Main application class demonstrating the banking system functionality.
@@ -40,7 +42,7 @@ public class BankApp {
         System.out.println("=== Welcome to the Banking System ===\n");
 
         myBank.loadData();
-        myBank.startInterestService();  
+        //myBank.startInterestService();
 
         // Main menu loop
         while (true) {
@@ -116,49 +118,63 @@ public class BankApp {
     }
 
     private static void login() {
-        System.out.print("\nEnter account number: ");
-        String accountNumber = scanner.nextLine().trim();
+        System.out.println("\n--- Secure Login ---");
+
+        System.out.print("Username: ");
+        String username = scanner.nextLine().trim();
+
+        System.out.print("Password: ");
+        String password = scanner.nextLine().trim();
 
         try {
-            currentAccount = myBank.getAccount(accountNumber);
-            if (currentAccount == null) {
-                System.out.println("ERROR: Account not found.");
-            } else {
-                System.out.println("✓ Login successful! Welcome, " + currentAccount.getOwnerName());
-            }
+            // 1. Authenticate (Checks password)
+            // You need to import banking.accounts.User;
+            User user = myBank.authenticateUser(username, password);
+
+            // 2. Retrieve the Linked Account
+            String accountId = user.getLinkedAccountId();
+            currentAccount = myBank.getAccount(accountId);
+
+            System.out.println("✓ Welcome back, " + currentAccount.getOwnerName());
+
+        } catch (InvalidCredentialsException e) {
+            System.out.println("LOGIN FAILED: " + e.getMessage());
         } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
         }
     }
 
     private static void createAccount() {
-        System.out.print("\nEnter your name: ");
+        System.out.println("\n--- New Customer Registration ---");
+
+        // 1. Capture Credentials
+        System.out.print("Enter desired Username: ");
+        String username = scanner.nextLine().trim();
+
+        System.out.print("Enter Password: ");
+        String password = scanner.nextLine().trim();
+
+        System.out.print("Enter your Full Name: ");
         String name = scanner.nextLine().trim();
 
         System.out.println("Select account type:");
-        System.out.println("[1] Savings Account (2% interest)");
-        System.out.println("[2] Checking Account (Overdraft protection)");
+        System.out.println("[1] Savings Account");
+        System.out.println("[2] Checking Account");
         System.out.print("Choose: ");
-        String type = scanner.nextLine().trim();
+        String typeSelection = scanner.nextLine().trim();
+
+        // 2. Map selection to string
+        String accountType = typeSelection.equals("2") ? "checking" : "savings";
 
         try {
-            BankAccount newAccount;
-            if (type.equals("1")) {
-                newAccount = new SavingsAccount(generateAccountNumber(), name);
-            } else if (type.equals("2")) {
-                newAccount = new CheckingAccount(generateAccountNumber(), name);
-            } else {
-                System.out.println("Invalid account type.");
-                return;
-            }
+            // 3. Call the POWER METHOD you wrote in Bank.java
+            myBank.createNewCustomer(username, password, name, accountType);
 
-            myBank.openAccount(newAccount);
-            System.out.println("✓ Account created successfully!");
-            System.out.println("Your account number is: " + newAccount.getAccountNumber());
+            System.out.println("✓ Registration Successful! You may now login.");
+            myBank.saveData(); // Save immediately
 
-            myBank.saveData();
-        } catch (AccountStatusException e) {
-            System.out.println("ERROR: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("REGISTRATION FAILED: " + e.getMessage());
         }
     }
 
@@ -251,9 +267,5 @@ public class BankApp {
         scanner.close();
         System.out.println("✓ Goodbye!");
         System.exit(0);
-    }
-
-    private static String generateAccountNumber() {
-        return String.valueOf(10000 + (int) (Math.random() * 90000));
     }
 }
