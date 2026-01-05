@@ -86,7 +86,7 @@ app/
 
 ![Transfer Sequence](out/docs/sequence-diagram.png)
 
-**Two-Phase Commit:**
+**Local try/compensate pattern (often called saga with a compensation):**
 1. **Withdrawal Phase**: Deduct from source account
 2. **Deposit Phase**: Add to target account
 3. **Rollback**: If deposit fails, automatically reverse withdrawal
@@ -131,7 +131,7 @@ java -cp "lib/*:bin" org.junit.platform.console.ConsoleLauncher --scan-class-pat
 javac -d bin src/app/*.java src/banking/**/*.java
 
 # Run
-java -cp bin app.BankApp
+java -cp bin app.BankApp You will learn
 
 # Test
 java -cp "lib/*:bin" org.junit.platform.console.ConsoleLauncher --scan-class-path
@@ -229,25 +229,6 @@ savings.applyInterest();  // Adds $50
 ### Singleton
 `CentralBank.getInstance()` ensures one global rate manager.
 
-### Factory Method
-`Bank.createNewCustomer()` encapsulates account+user creation logic.
-
-The abstract base class defines the skeleton of withdrawal operations, allowing subclasses to customize specific steps:
-
-```java
-
-
-```java
-// BankAccount.withdraw() - template method
-public void withdraw(double amount) throws Exception {
-    withdrawInternal(amount, TransactionType.WITHDRAWAL);
-}
-
-// Subclasses override withdrawInternal()
-// CheckingAccount: overdraft + fee logic
-// SavingsAccount: no overdraft allowed
-```
-
 ### Exception Handling
 
 **Custom Exceptions:**
@@ -329,4 +310,4 @@ BankSystem/
 
 ## Future Work
 
-- **We take this exact Bank Engine and replace the black console with Windows, Buttons, and Charts. You will learn Event-Driven Programming.**
+- **We take this exact Bank Engine and replace the black console with Windows, Buttons, and Charts. Using Event-Driven Programming.**
